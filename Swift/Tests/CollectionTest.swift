@@ -161,6 +161,10 @@ class CollectionTest: CBLTestCase {
         let colB = try self.db.createCollection(name: "colA", scope: "scopeA")
         let doc1 = try colB.document(id: "doc1")
         XCTAssertNotNil(doc1)
+        
+        // verify no duplicate is created.
+        let collections = try self.db.collections(scope: "scopeA")
+        XCTAssertEqual(collections.count, 1)
     }
     
     func testGetNonExistingCollection() throws {
@@ -335,26 +339,6 @@ class CollectionTest: CBLTestCase {
         XCTAssertEqual(scopes.count, 3)
         XCTAssert(scopes.contains(where: { $0.name == "scopeA" }))
         XCTAssert(scopes.contains(where: { $0.name == "SCOPEa" }))
-    }
-    
-    // MARK: Others
-    
-    func testCreateDuplicateCollection() throws {
-        // Create in Default Scope
-        let _ = try self.db.createCollection(name: "collection1")
-        let _ = try self.db.createCollection(name: "collection1")
-        
-        // verify no duplicate is created.
-        var collections = try self.db.collections()
-        XCTAssertEqual(collections.count, 2)
-        
-        // Create in Custom Scope
-        let _ = try self.db.createCollection(name: "collection2", scope: "scope1")
-        let _ = try self.db.createCollection(name: "collection2", scope: "scope1")
-        
-        // verify no duplicate is created.
-        collections = try self.db.collections(scope: "scope1")
-        XCTAssertEqual(collections.count, 1)
     }
     
     // MARK: 8.3 Collections and Cross Database Instance
@@ -664,6 +648,11 @@ class CollectionTest: CBLTestCase {
         
         try onAction()
         
+        // Properties
+        XCTAssertNotNil(col.name)
+        XCTAssertNotNil(col.scope)
+        XCTAssertEqual(col.count, 0)
+        
         // document(id:)
         expectError(domain: CBLErrorDomain, code: CBLError.notOpen) {
             let _ = try col.document(id: "doc2")
@@ -712,11 +701,23 @@ class CollectionTest: CBLTestCase {
         expectError(domain: CBLErrorDomain, code: CBLError.notOpen) {
             let _ = try col.createIndex(withName: "index1", config: config)
         }
+        let config2 = FullTextIndexConfiguration(["detail"])
+        expectError(domain: CBLErrorDomain, code: CBLError.notOpen) {
+            let _ = try col.createIndex(withName: "index2", config: config2)
+        }
         expectError(domain: CBLErrorDomain, code: CBLError.notOpen) {
             let _ = try col.indexes()
         }
         expectError(domain: CBLErrorDomain, code: CBLError.notOpen) {
             let _ = try col.deleteIndex(forName: "index2")
+        }
+        
+        // change listener
+        ignoreException {
+           let _ = col.addChangeListener { (change) in }
+        }
+        ignoreException {
+            let _ = col.addDocumentChangeListener(id: "doc1") { docChange in }
         }
     }
     
