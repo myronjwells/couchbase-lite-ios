@@ -67,6 +67,9 @@
     _client = nil;
     
     [self stopListen];
+    
+    [NSThread sleepForTimeInterval: 2.0];
+    
     [super tearDown];
 }
 
